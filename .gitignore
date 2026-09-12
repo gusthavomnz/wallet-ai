@@ -1,0 +1,14 @@
+.idea/
+
+target/
+*.jar
+*.war
+
+.env
+.env.*
+!.env.example
+
+docker-compose.override.yml
+
+.DS_Store
+Thumbs.db
