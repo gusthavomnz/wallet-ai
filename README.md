@@ -2,7 +2,7 @@
 
 <p align="center">
   🌐 Select your language / Selecione seu idioma:<br>
-  <a href="#english">➡ English</a> &nbsp;|&nbsp; <a href="#português">➡ Português</a>
+  <a href="#english">&rarr; English</a> &nbsp;|&nbsp; <a href="#português">Português &larr;</a>
 </p>
 
 <p align="center">
