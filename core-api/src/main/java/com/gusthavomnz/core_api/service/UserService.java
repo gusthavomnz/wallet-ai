@@ -7,6 +7,7 @@ import com.gusthavomnz.core_api.entity.User;
 import com.gusthavomnz.core_api.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -16,6 +17,7 @@ import org.springframework.web.server.ResponseStatusException;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Transactional
     public UserResponse create(CreateUserRequest request) {
@@ -26,7 +28,7 @@ public class UserService {
         var user = new User();
         user.setName(request.name());
         user.setEmail(request.email());
-        user.setPasswordHash(request.password());
+        user.setPasswordHash(passwordEncoder.encode(request.password()));
 
         return toResponse(userRepository.save(user));
     }
