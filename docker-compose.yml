@@ -28,5 +28,12 @@ services:
       mysql:
         condition: service_healthy
 
+  ai-worker:
+    build: ./ai-worker
+    environment:
+      GEMINI_KEY: ${GEMINI_KEY}
+    depends_on:
+      - core-api
+
 volumes:
   mysql_data:
