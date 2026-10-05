@@ -9,25 +9,22 @@ import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3Configuration;
-import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
-import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
-import software.amazon.awssdk.services.s3.model.NoSuchBucketException;
-import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.*;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
+import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 
 import java.net.URI;
+import java.time.Duration;
+import java.net.URL;
 
 @Component
 public class S3StorageAdapter implements S3StoragePort {
 
-    private final String endpoint;
-
     private final String publicUrl;
-
-    private final S3Client s3Client;
-
     private final String bucketName;
-
-    private final String region;
+    private final S3Client s3Client;
+    private final S3Presigner presigner;
 
     public S3StorageAdapter(
             @Value("${aws.s3.endpoint}") String endpoint,
@@ -37,36 +34,42 @@ public class S3StorageAdapter implements S3StoragePort {
             @Value("${aws.s3.access-key}") String accessKey,
             @Value("${aws.s3.secret-key}") String secretKey
     ) {
-        this.endpoint = endpoint;
         this.publicUrl = publicUrl;
         this.bucketName = bucketName;
-        this.region = region;
+
         /*
         Por estarmos utilizando o AWS mockado pelo Docker, não conseguimos utilizar o S3Client autogerenciado pela biblioteca da AWS.
         Sendo necessario a config inicial gerenciada manualmente
          */
+        StaticCredentialsProvider credentials = StaticCredentialsProvider.create(
+                AwsBasicCredentials.create(accessKey, secretKey)
+        );
+
+        S3Configuration s3Config = S3Configuration.builder()
+                .pathStyleAccessEnabled(true)
+                .build();
 
         this.s3Client = S3Client.builder()
-                .region(Region.of(this.region))
-                .endpointOverride(URI.create(this.endpoint))
-                .credentialsProvider(StaticCredentialsProvider.create(
-                        AwsBasicCredentials.create(accessKey, secretKey)
-                ))
-                .serviceConfiguration(S3Configuration.builder()
-                        .pathStyleAccessEnabled(true)
-                        .build())
+                .region(Region.of(region))
+                .endpointOverride(URI.create(endpoint))
+                .credentialsProvider(credentials)
+                .serviceConfiguration(s3Config)
+                .build();
+
+        this.presigner = S3Presigner.builder()
+                .region(Region.of(region))
+                .endpointOverride(URI.create(endpoint))
+                .credentialsProvider(credentials)
+                .serviceConfiguration(s3Config)
                 .build();
 
         initBucket();
     }
 
-
     /*
       Essa função é necessaria para inicializarmos o bucket na primeira vez que a aplicação é criada.
       Nesse mock do s3 não temos UI para fazermos isso pela interface
-        */
-
-
+    */
     private void initBucket() {
         try {
             s3Client.headBucket(HeadBucketRequest.builder().bucket(bucketName).build());
@@ -85,6 +88,27 @@ public class S3StorageAdapter implements S3StoragePort {
 
         s3Client.putObject(putObjectRequest, RequestBody.fromBytes(fileData));
 
-        return String.format("%s/%s/%s", publicUrl, bucketName, fileName);
+        return generateTempFileLink(fileName,1);
     }
+
+
+    public String generateTempFileLink(String fileName, int expirationMinutes) {
+        GetObjectRequest objectRequest = GetObjectRequest.builder().
+                bucket(this.bucketName).
+                key(fileName).
+                build();
+
+        GetObjectPresignRequest presignRequest = GetObjectPresignRequest.builder()
+                .signatureDuration(Duration.ofMinutes(expirationMinutes))
+                .getObjectRequest(objectRequest)
+                .build();
+
+        URL signedUrl = presigner.presignGetObject(presignRequest).url();
+
+        return signedUrl.toString().replace(
+                signedUrl.getProtocol() + "://" + signedUrl.getHost() + (signedUrl.getPort() != -1 ? ":" + signedUrl.getPort() : ""),
+                publicUrl
+        );
+    }
+
 }
