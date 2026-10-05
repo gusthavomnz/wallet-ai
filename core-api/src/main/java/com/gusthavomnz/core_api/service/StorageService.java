@@ -16,6 +16,7 @@ public class StorageService {
 
     public String upload(MultipartFile file) throws IOException {
         String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
-        return s3StoragePort.uploadFile(file.getBytes(), fileName, file.getContentType());
+        s3StoragePort.uploadFile(file.getBytes(), fileName, file.getContentType());
+        return fileName;
     }
 }

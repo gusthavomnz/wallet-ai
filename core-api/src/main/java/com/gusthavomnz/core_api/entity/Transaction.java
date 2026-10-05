@@ -44,6 +44,9 @@ public class Transaction {
     @Column(nullable = false, columnDefinition = "ENUM('MANUAL','OCR','CHAT')")
     private TransactionOrigin origin;
 
+    @Column(name = "image_file_name")
+    private String imageFileName;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

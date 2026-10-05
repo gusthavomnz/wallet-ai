@@ -12,11 +12,10 @@ import software.amazon.awssdk.services.s3.S3Configuration;
 import software.amazon.awssdk.services.s3.model.*;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
-import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
 
 import java.net.URI;
-import java.time.Duration;
 import java.net.URL;
+import java.time.Duration;
 
 @Component
 public class S3StorageAdapter implements S3StoragePort {
@@ -80,35 +79,33 @@ public class S3StorageAdapter implements S3StoragePort {
 
     @Override
     public String uploadFile(byte[] fileData, String fileName, String contentType) {
-        PutObjectRequest putObjectRequest = PutObjectRequest.builder()
-                .bucket(bucketName)
-                .key(fileName)
-                .contentType(contentType)
-                .build();
+        s3Client.putObject(
+                PutObjectRequest.builder()
+                        .bucket(bucketName)
+                        .key(fileName)
+                        .contentType(contentType)
+                        .build(),
+                RequestBody.fromBytes(fileData)
+        );
 
-        s3Client.putObject(putObjectRequest, RequestBody.fromBytes(fileData));
-
-        return generateTempFileLink(fileName,1);
+        return fileName;
     }
 
-
+    @Override
     public String generateTempFileLink(String fileName, int expirationMinutes) {
-        GetObjectRequest objectRequest = GetObjectRequest.builder().
-                bucket(this.bucketName).
-                key(fileName).
-                build();
-
-        GetObjectPresignRequest presignRequest = GetObjectPresignRequest.builder()
-                .signatureDuration(Duration.ofMinutes(expirationMinutes))
-                .getObjectRequest(objectRequest)
-                .build();
-
-        URL signedUrl = presigner.presignGetObject(presignRequest).url();
+        URL signedUrl = presigner.presignGetObject(
+                GetObjectPresignRequest.builder()
+                        .signatureDuration(Duration.ofMinutes(expirationMinutes))
+                        .getObjectRequest(GetObjectRequest.builder()
+                                .bucket(bucketName)
+                                .key(fileName)
+                                .build())
+                        .build()
+        ).url();
 
         return signedUrl.toString().replace(
                 signedUrl.getProtocol() + "://" + signedUrl.getHost() + (signedUrl.getPort() != -1 ? ":" + signedUrl.getPort() : ""),
                 publicUrl
         );
     }
-
 }

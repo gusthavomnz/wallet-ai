@@ -24,6 +24,7 @@ services:
       DB_NAME: ${DB_NAME:-wallet}
       DB_USER: root
       DB_PASSWORD: ${DB_PASSWORD:-root}
+      AI_WORKER_URL: http://ai-worker:5000
       AWS_S3_ENDPOINT: http://s3-local:9090
       AWS_S3_PUBLIC_URL: http://localhost:9000
       AWS_BUCKET_NAME: ${AWS_BUCKET_NAME:-wallet}
