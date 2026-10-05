@@ -24,6 +24,12 @@ modelConfig = types.GenerateContentConfig(
     response_mime_type="application/json"
 )
 
+chat = client.chats.create(
+    model="gemini-3.8-flash",
+    config=modelConfig
+)
+
+
 def enviarMensagem(userMessage, imageBase64=None, mimeType=None):
     parts = []
 
@@ -33,6 +39,5 @@ def enviarMensagem(userMessage, imageBase64=None, mimeType=None):
 
     parts.append(types.Part.from_text(text=userMessage))
 
-    chat = client.chats.create(model="gemini-3.8-flash", config=modelConfig)
     response = chat.send_message(parts)
     return json.loads(response.text)
